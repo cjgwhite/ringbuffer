@@ -6,13 +6,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-class RingBufferTest {
+class BlockingRingBufferTest {
 
   private RingBuffer<String> ringBuffer;
 
   @BeforeEach
   void setUp() {
-    ringBuffer = new RingBuffer<>();
+    ringBuffer = new RingBuffer<>(2, true);
   }
 
   @Test
@@ -30,7 +30,7 @@ class RingBufferTest {
 
     ringBuffer.put("VALUE");
     var startSize = ringBuffer.size();
-    ringBuffer.read();
+    ringBuffer.get();
 
     assertEquals(startSize-1, ringBuffer.size());
   }
@@ -46,7 +46,7 @@ class RingBufferTest {
     String valueToPut = "VALUE";
     assertEquals(0, ringBuffer.size());
     ringBuffer.put(valueToPut);
-    var valueRead = ringBuffer.read().get();
+    var valueRead = ringBuffer.get().get();
 
     assertEquals(valueToPut, valueRead);
   }
@@ -63,8 +63,8 @@ class RingBufferTest {
     ringBuffer.put(valueToPut + "First");
     ringBuffer.put(valueToPut + "Second");
 
-    assertEquals(valueToPut+"First", ringBuffer.read().get());
-    assertEquals(valueToPut+"Second", ringBuffer.read().get());
+    assertEquals(valueToPut+"First", ringBuffer.get().get());
+    assertEquals(valueToPut+"Second", ringBuffer.get().get());
   }
 
   @Test
@@ -94,7 +94,7 @@ class RingBufferTest {
     assertTrue(ringBuffer.isEmpty());
     assertEquals(0, ringBuffer.size());
 
-    assertTrue(ringBuffer.read().isEmpty());
+    assertTrue(ringBuffer.get().isEmpty());
 
     assertTrue(ringBuffer.isEmpty());
     assertEquals(0, ringBuffer.size());
@@ -113,9 +113,9 @@ class RingBufferTest {
     ringBuffer.put("VALUE 3");
 
 
-    ringBuffer.read();
-    ringBuffer.read();
-    ringBuffer.read();
+    ringBuffer.get();
+    ringBuffer.get();
+    ringBuffer.get();
 
     assertTrue(ringBuffer.isEmpty());
     assertEquals(0, ringBuffer.size());
@@ -131,7 +131,7 @@ class RingBufferTest {
       ringBuffer.put("VALUE ");
     }
 
-    ringBuffer.read();
+    ringBuffer.get();
 
     assertTrue(ringBuffer.put("ANOTHER VALUE"));
     assertFalse(ringBuffer.put("NO SPACE FOR THIS ONE"));

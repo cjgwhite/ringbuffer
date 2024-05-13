@@ -1,64 +1,108 @@
 package com.phoundation.ring;
 
+import java.util.Arrays;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
-public class RingBuffer<T> {
+public class RingBuffer<T>  {
 
+  private final AtomicBoolean putLast = new AtomicBoolean(false);
   private static final int DEFAULT_CAPACITY = 1000;
   private final AtomicInteger writeIndex = new AtomicInteger(0);
   private final AtomicInteger readIndex = new AtomicInteger(0);
   private final int capacity;
-
+  private final boolean blocking;
   private final T[] buffer;
 
-  public RingBuffer(int capacity) {
+  RingBuffer(int capacity, boolean blocking) {
+    this.blocking = blocking;
     this.capacity = capacity < 1 ? DEFAULT_CAPACITY : capacity;
     this.buffer = (T[]) new Object[capacity];
   }
 
-  public RingBuffer() {
-    this.capacity = DEFAULT_CAPACITY;
-    this.buffer = (T[]) new Object[this.capacity];
+  public final int size() {
+    if (currentWritePointer() > currentReadPointer()) {
+      return currentWritePointer() - currentReadPointer();
+    }
+
+    if (currentReadPointer() == currentWritePointer()) {
+      if (putLast.get()) {
+        return capacity;
+      } else {
+        return 0;
+      }
+    }
+
+    return (capacity - currentReadPointer()) + currentWritePointer();
   }
 
-  public int size() {
-    var write = writeIndex.get();
-    var read = readIndex.get();
+  public final boolean isFull() {
+    return putLast.get() && currentWritePointer() == currentReadPointer();
+  }
 
-    var diff = write - read;
+  public final boolean isEmpty() {
+    return !putLast.get() && currentReadPointer() == currentWritePointer();
+  }
 
-    return diff < 0 ?
-      capacity - read + write :
-      diff;
+  public final synchronized Optional<T> get() {
+
+    if (isEmpty()) {
+      return Optional.empty();
+    }
+    putLast.set(false);
+    return Optional.of(buffer[advanceReadPointer()]);
 
   }
 
-  public boolean isFull() {
+  public synchronized boolean put(T value) {
+    if (isFull()) {
+      if (blocking) {
+        return false;
+      }
 
-    return size() == capacity-1;
-  }
+      advanceReadPointer();
+    }
+    add(value);
 
-  public boolean isEmpty() {
-    return writeIndex.get() == readIndex.get();
+    return true;
   }
 
   private int nextVal(int val) {
     return (val+1) % capacity;
   }
 
-  public synchronized boolean put(T value) {
-    if (isFull()) {
-      return false;
-    }
-
-    buffer[writeIndex.getAndUpdate(this::nextVal)] = value;
-    return true;
+  private void add(T value) {
+    putLast.set(true);
+    buffer[advanceWritePointer()] = value;
   }
 
-  public synchronized Optional<T> read() {
-    return isEmpty() ?
-               Optional.empty()
-               : Optional.of(buffer[readIndex.getAndUpdate(this::nextVal)]);
+  private int advanceWritePointer() {
+    return writeIndex.getAndUpdate(this::nextVal);
+  }
+
+  private int advanceReadPointer() {
+    return readIndex.getAndUpdate(this::nextVal);
+  }
+
+  private int currentReadPointer() {
+    return readIndex.get();
+  }
+
+  private int currentWritePointer() {
+    return writeIndex.get();
+  }
+
+  public Stream<T> stream() {
+    return Stream.generate(() -> {
+      while (isEmpty()) {}
+      return get().get();
+
+    });
+  }
+
+  public String toString() {
+    return Arrays.toString(buffer) + " : Read="+currentReadPointer()+" Write:"+currentWritePointer();
   }
 }
