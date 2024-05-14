@@ -97,8 +97,4 @@ public class RingBuffer<T>  {
   private int currentWritePointer() {
     return writeIndex.get();
   }
-
-  public String toString() {
-    return Arrays.toString(buffer) + " : Read="+currentReadPointer()+" Write:"+currentWritePointer();
-  }
 }
