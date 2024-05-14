@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class BlockingRingBufferTest {
 
@@ -12,27 +14,7 @@ class BlockingRingBufferTest {
 
   @BeforeEach
   void setUp() {
-    ringBuffer = new RingBuffer<>(2, true);
-  }
-
-  @Test
-  @DisplayName("Add element increases size")
-  void putElementIncreasesSize()  {
-    var startSize = ringBuffer.size();
-    ringBuffer.put("VALUE");
-
-    assertEquals(startSize+1, ringBuffer.size());
-  }
-
-  @Test
-  @DisplayName("Read element decreases size")
-  void readElementDecreasesSize() {
-
-    ringBuffer.put("VALUE");
-    var startSize = ringBuffer.size();
-    ringBuffer.get();
-
-    assertEquals(startSize-1, ringBuffer.size());
+    ringBuffer = new RingBuffer<>(3, true);
   }
 
   @Test
@@ -44,7 +26,7 @@ class BlockingRingBufferTest {
       """)
   void getsThePutElement() {
     String valueToPut = "VALUE";
-    assertEquals(0, ringBuffer.size());
+    assertTrue(ringBuffer.isEmpty());
     ringBuffer.put(valueToPut);
     var valueRead = ringBuffer.get().get();
 
@@ -135,6 +117,41 @@ class BlockingRingBufferTest {
 
     assertTrue(ringBuffer.put("ANOTHER VALUE"));
     assertFalse(ringBuffer.put("NO SPACE FOR THIS ONE"));
+  }
+
+  @ParameterizedTest(name = "{index} When {0} added and {1} retrieved then size=={2}")
+  @CsvSource(
+      delimiterString = "|",
+      textBlock =
+//        add | get | expect
+          """
+          0   | 0   | 0
+          0   | 1   | 0
+          1   | 0   | 1
+          2   | 0   | 2
+          3   | 0   | 3
+          4   | 0   | 3
+          1   | 1   | 0
+          2   | 1   | 1
+          3   | 1   | 2
+          4   | 1   | 2
+          2   | 2   | 0
+          3   | 3   | 0
+          4   | 3   | 0
+          4   | 4   | 0
+                    """
+  )
+  @DisplayName("Given RingBuffer of capacity 2")
+  void testingSize(int add, int get, int expect) {
+    for (int count=0; count < add; count++) {
+      ringBuffer.put("VALUE "+count);
+    }
+
+    for (int count = 0; count < get; count++) {
+      ringBuffer.get();
+    }
+
+    assertEquals(expect, ringBuffer.size());
   }
 
 }

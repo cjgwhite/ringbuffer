@@ -1,10 +1,10 @@
 package com.phoundation.ring;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 public class RingBuffer<T>  {
 
@@ -17,8 +17,12 @@ public class RingBuffer<T>  {
   private final T[] buffer;
 
   RingBuffer(int capacity, boolean blocking) {
+    if (capacity < 1) {
+      throw new IllegalArgumentException("Capacity <1");
+    }
+
     this.blocking = blocking;
-    this.capacity = capacity < 1 ? DEFAULT_CAPACITY : capacity;
+    this.capacity = capacity;
     this.buffer = (T[]) new Object[capacity];
   }
 
@@ -92,14 +96,6 @@ public class RingBuffer<T>  {
 
   private int currentWritePointer() {
     return writeIndex.get();
-  }
-
-  public Stream<T> stream() {
-    return Stream.generate(() -> {
-      while (isEmpty()) {}
-      return get().get();
-
-    });
   }
 
   public String toString() {

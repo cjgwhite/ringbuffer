@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class NonBlockingRingBufferTest {
 
@@ -12,27 +14,7 @@ class NonBlockingRingBufferTest {
 
   @BeforeEach
   void setUp() {
-    ringBuffer = new RingBuffer<>(2, false);
-  }
-
-  @Test
-  @DisplayName("Add element increases size")
-  void putElementIncreasesSize()  {
-    var startSize = ringBuffer.size();
-    ringBuffer.put("VALUE");
-
-    assertEquals(startSize+1, ringBuffer.size());
-  }
-
-  @Test
-  @DisplayName("Read element decreases size")
-  void readElementDecreasesSize() {
-
-    ringBuffer.put("VALUE");
-    var startSize = ringBuffer.size();
-    ringBuffer.get();
-
-    assertEquals(startSize-1, ringBuffer.size());
+    ringBuffer = new RingBuffer<>(3, false);
   }
 
   @Test
@@ -40,7 +22,6 @@ class NonBlockingRingBufferTest {
       Given an empty RingBuffer
       When I PUT an element
       Then READ returns same element
-      And size is 0
       """)
   void getsThePutElement() {
     String valueToPut = "VALUE";
@@ -73,15 +54,11 @@ class NonBlockingRingBufferTest {
       When I PUT an elements
       Then it returns true
       """)
-  void trueIfPutWHenFull()  {
+  void trueIfPutWhenFull()  {
     while(!ringBuffer.isFull()) {
       ringBuffer.put("VALUE ");
     }
-    var size = ringBuffer.size();
-
     assertTrue(ringBuffer.put("NEXT VALUE"));
-
-    assertEquals(size, ringBuffer.size());
   }
 
   @Test
@@ -111,12 +88,10 @@ class NonBlockingRingBufferTest {
       """)
   void emptyOptionalIfEmpty()  {
     assertTrue(ringBuffer.isEmpty());
-    assertEquals(0, ringBuffer.size());
 
     assertTrue(ringBuffer.get().isEmpty());
 
     assertTrue(ringBuffer.isEmpty());
-    assertEquals(0, ringBuffer.size());
   }
 
 
@@ -141,4 +116,38 @@ class NonBlockingRingBufferTest {
 
   }
 
+  @ParameterizedTest(name = "{index} When {0} added and {1} retrieved then size=={2}")
+  @CsvSource(
+      delimiterString = "|",
+      textBlock =
+//        add | get | expect
+"""
+          0   | 0   | 0
+          0   | 1   | 0
+          1   | 0   | 1
+          2   | 0   | 2
+          3   | 0   | 3
+          4   | 0   | 3
+          1   | 1   | 0
+          2   | 1   | 1
+          3   | 1   | 2
+          4   | 1   | 2
+          2   | 2   | 0
+          3   | 3   | 0
+          4   | 3   | 0
+          4   | 4   | 0
+          """
+  )
+  @DisplayName("Given RingBuffer of capacity 2")
+  void testingSize(int add, int get, int expect) {
+    for (int count=0; count < add; count++) {
+      ringBuffer.put("VALUE "+count);
+    }
+
+    for (int count = 0; count < get; count++) {
+      ringBuffer.get();
+    }
+
+    assertEquals(expect, ringBuffer.size());
+  }
 }
