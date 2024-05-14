@@ -9,7 +9,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RingBuffer<T>  {
 
   private final AtomicBoolean putLast = new AtomicBoolean(false);
-  private static final int DEFAULT_CAPACITY = 1000;
   private final AtomicInteger writeIndex = new AtomicInteger(0);
   private final AtomicInteger readIndex = new AtomicInteger(0);
   private final int capacity;
@@ -27,19 +26,16 @@ public class RingBuffer<T>  {
   }
 
   public final int size() {
-    if (currentWritePointer() > currentReadPointer()) {
-      return currentWritePointer() - currentReadPointer();
+
+    if (isFull()) {
+      return capacity;
     }
 
-    if (currentReadPointer() == currentWritePointer()) {
-      if (putLast.get()) {
-        return capacity;
-      } else {
-        return 0;
-      }
+    if (isEmpty()) {
+      return 0;
     }
 
-    return (capacity - currentReadPointer()) + currentWritePointer();
+    return Math.floorMod(currentWritePointer() - currentReadPointer(), capacity);
   }
 
   public final boolean isFull() {

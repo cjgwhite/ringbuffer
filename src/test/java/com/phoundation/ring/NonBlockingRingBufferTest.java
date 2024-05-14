@@ -14,7 +14,7 @@ class NonBlockingRingBufferTest {
 
   @BeforeEach
   void setUp() {
-    ringBuffer = new RingBuffer<>(3, false);
+    ringBuffer = new RingBuffer<>(4, false);
   }
 
   @Test
@@ -123,22 +123,29 @@ class NonBlockingRingBufferTest {
 //        add | get | expect
 """
           0   | 0   | 0
-          0   | 1   | 0
           1   | 0   | 1
           2   | 0   | 2
           3   | 0   | 3
-          4   | 0   | 3
+          4   | 0   | 4
+          5   | 0   | 4
+          0   | 1   | 0
           1   | 1   | 0
           2   | 1   | 1
           3   | 1   | 2
-          4   | 1   | 2
+          4   | 1   | 3
+          5   | 1   | 3
           2   | 2   | 0
+          3   | 2   | 1
+          4   | 2   | 2
+          5   | 2   | 2
           3   | 3   | 0
-          4   | 3   | 0
+          4   | 3   | 1
+          5   | 3   | 1
           4   | 4   | 0
+          5   | 4   | 0
           """
   )
-  @DisplayName("Given RingBuffer of capacity 2")
+  @DisplayName("Given RingBuffer of capacity 4")
   void testingSize(int add, int get, int expect) {
     for (int count=0; count < add; count++) {
       ringBuffer.put("VALUE "+count);
