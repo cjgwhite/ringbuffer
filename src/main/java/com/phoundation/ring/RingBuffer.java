@@ -3,6 +3,7 @@ package com.phoundation.ring;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 
 public class RingBuffer<T>  {
 
@@ -24,15 +25,8 @@ public class RingBuffer<T>  {
   }
 
   public final int size() {
-
-    if (isFull()) {
-      return capacity;
-    }
-
-    if (isEmpty()) {
-      return 0;
-    }
-
+    if (isFull()) return capacity;
+    if (isEmpty()) return 0;
     return Math.floorMod(currentWritePointer() - currentReadPointer(), capacity);
   }
 
@@ -46,38 +40,34 @@ public class RingBuffer<T>  {
 
   public final synchronized Optional<T> get() {
 
-    if (isEmpty()) {
-      return Optional.empty();
-    }
+    if (isEmpty()) return Optional.empty();
     putLast.set(false);
     return Optional.of(buffer[advanceReadPointer()]);
 
   }
 
   public synchronized boolean put(T value) {
-    if (isFull()) {
-      if (blocking) {
-        return false;
-      }
+    if (isFull() && blocking) return false;
 
-      advanceReadPointer();
-    }
-    add(value);
+    conditionalAdvanceReadPointer(this::isFull);
+
+    putLast.set(true);
+    buffer[advanceWritePointer()] = value;
 
     return true;
+
   }
 
   private int nextVal(int val) {
     return (val+1) % capacity;
   }
 
-  private void add(T value) {
-    putLast.set(true);
-    buffer[advanceWritePointer()] = value;
-  }
-
   private int advanceWritePointer() {
     return writeIndex.getAndUpdate(this::nextVal);
+  }
+
+  private void conditionalAdvanceReadPointer(BooleanSupplier condition) {
+    readIndex.updateAndGet(val -> condition.getAsBoolean() ? nextVal(val) : val);
   }
 
   private int advanceReadPointer() {
